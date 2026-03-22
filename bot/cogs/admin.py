@@ -12,7 +12,7 @@ class Admin(commands.Cog):
         self.bot = bot
 
     @app_commands.command(
-        name="ticketsetup",
+        name="ticketsetup2",
         description="Configurează sistemul de tickete pentru acest server.",
     )
     @app_commands.describe(

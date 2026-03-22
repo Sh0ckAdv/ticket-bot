@@ -44,8 +44,13 @@ class RatoniiTicketsBot(commands.Bot):
         try:
             if guild_id is not None:
                 guild = discord.Object(id=guild_id)
+
+                self.tree.clear_commands(guild=guild)
+                await self.tree.sync(guild=guild)
+
                 self.tree.copy_global_to(guild=guild)
                 synced = await self.tree.sync(guild=guild)
+
                 print(f"[SYNC] S-au sincronizat {len(synced)} comenzi pe serverul {guild_id}.")
             else:
                 synced = await self.tree.sync()
