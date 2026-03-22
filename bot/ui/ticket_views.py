@@ -1,14 +1,49 @@
 from __future__ import annotations
-import asyncio
 
+import asyncio
 import discord
-from datetime import datetime
-from zoneinfo import ZoneInfo
+from datetime import datetime, timezone
 from sqlalchemy import select
 
 from bot.db.models import GuildSettings, StaffPoint, Ticket
 from bot.db.session import AsyncSessionLocal
 from bot.services.transcript_service import build_transcript_file
+
+
+async def is_staff_allowed(interaction: discord.Interaction) -> bool:
+    if interaction.guild is None or interaction.channel is None:
+        return False
+
+    if not isinstance(interaction.user, discord.Member):
+        return False
+
+    async with AsyncSessionLocal() as session:
+        settings_result = await session.execute(
+            select(GuildSettings).where(GuildSettings.guild_id == interaction.guild.id)
+        )
+        settings = settings_result.scalar_one_or_none()
+
+        ticket_result = await session.execute(
+            select(Ticket).where(Ticket.channel_id == interaction.channel.id)
+        )
+        ticket = ticket_result.scalar_one_or_none()
+
+    if settings is None or ticket is None:
+        return False
+
+    allowed_role_ids: set[int] = set()
+
+    if ticket.ticket_type == "password":
+        if settings.password_support_role_id:
+            allowed_role_ids.add(settings.password_support_role_id)
+    else:
+        if settings.discord_staff_role_id:
+            allowed_role_ids.add(settings.discord_staff_role_id)
+        if settings.manager_discord_role_id:
+            allowed_role_ids.add(settings.manager_discord_role_id)
+
+    member_role_ids = {role.id for role in interaction.user.roles}
+    return bool(allowed_role_ids & member_role_ids)
 
 
 class CloseConfirmView(discord.ui.View):
@@ -26,6 +61,14 @@ class CloseConfirmView(discord.ui.View):
         interaction: discord.Interaction,
         button: discord.ui.Button,
     ) -> None:
+        allowed = await is_staff_allowed(interaction)
+        if not allowed:
+            await interaction.response.send_message(
+                "Nu ai permisiunea să închizi acest ticket.",
+                ephemeral=True,
+            )
+            return
+
         await self._close_ticket(interaction, resolved=True)
 
     @discord.ui.button(
@@ -39,6 +82,14 @@ class CloseConfirmView(discord.ui.View):
         interaction: discord.Interaction,
         button: discord.ui.Button,
     ) -> None:
+        allowed = await is_staff_allowed(interaction)
+        if not allowed:
+            await interaction.response.send_message(
+                "Nu ai permisiunea să închizi acest ticket.",
+                ephemeral=True,
+            )
+            return
+
         await self._close_ticket(interaction, resolved=False)
 
     async def _close_ticket(
@@ -82,7 +133,7 @@ class CloseConfirmView(discord.ui.View):
 
             ticket.status = "closed"
             ticket.closed_by = interaction.user.id
-            ticket.closed_at = datetime.now(ZoneInfo("Europe/Bucharest"))
+            ticket.closed_at = datetime.now(timezone.utc)
 
             if resolved:
                 staff_points_result = await session.execute(
@@ -104,6 +155,7 @@ class CloseConfirmView(discord.ui.View):
                     staff_points.points += 1
 
             await session.commit()
+
         creator = interaction.guild.get_member(ticket.creator_id)
         closer = interaction.user
 
@@ -120,7 +172,7 @@ class CloseConfirmView(discord.ui.View):
                 f"**Status:** {status_text}"
             ),
             color=status_color,
-            timestamp=datetime.now(ZoneInfo("Europe/Bucharest")),
+            timestamp=datetime.now(timezone.utc),
         )
         transcript_embed.add_field(
             name="Creator",
@@ -146,7 +198,7 @@ class CloseConfirmView(discord.ui.View):
             title="Ticket închis",
             description=f"Canalul **{channel.name}** va fi șters automat.",
             color=status_color,
-            timestamp=datetime.now(ZoneInfo("Europe/Bucharest")),
+            timestamp=datetime.now(timezone.utc),
         )
         log_embed.add_field(
             name="Creator",
@@ -176,7 +228,7 @@ class CloseConfirmView(discord.ui.View):
                 "Canalul va fi șters în 5 secunde."
             ),
             color=status_color,
-            timestamp=datetime.now(ZoneInfo("Europe/Bucharest")),
+            timestamp=datetime.now(timezone.utc),
         )
         close_embed.set_footer(text="Ratonii Tickets")
 
@@ -200,38 +252,6 @@ class TicketView(discord.ui.View):
     def __init__(self) -> None:
         super().__init__(timeout=None)
 
-    async def _is_staff_allowed(self, interaction: discord.Interaction) -> bool:
-        if interaction.guild is None or not isinstance(interaction.user, discord.Member):
-            return False
-
-        async with AsyncSessionLocal() as session:
-            settings_result = await session.execute(
-                select(GuildSettings).where(GuildSettings.guild_id == interaction.guild.id)
-            )
-            settings = settings_result.scalar_one_or_none()
-
-            ticket_result = await session.execute(
-                select(Ticket).where(Ticket.channel_id == interaction.channel.id)
-            )
-            ticket = ticket_result.scalar_one_or_none()
-
-        if settings is None or ticket is None:
-            return False
-
-        allowed_role_ids: set[int] = set()
-
-        if ticket.ticket_type == "password":
-            if settings.password_support_role_id:
-                allowed_role_ids.add(settings.password_support_role_id)
-        else:
-            if settings.discord_staff_role_id:
-                allowed_role_ids.add(settings.discord_staff_role_id)
-            if settings.manager_discord_role_id:
-                allowed_role_ids.add(settings.manager_discord_role_id)
-
-        member_role_ids = {role.id for role in interaction.user.roles}
-        return bool(allowed_role_ids & member_role_ids)
-
     @discord.ui.button(
         label="Claim",
         style=discord.ButtonStyle.success,
@@ -246,7 +266,7 @@ class TicketView(discord.ui.View):
         if interaction.guild is None or interaction.channel is None:
             return
 
-        allowed = await self._is_staff_allowed(interaction)
+        allowed = await is_staff_allowed(interaction)
         if not allowed:
             await interaction.response.send_message(
                 "Nu ai permisiunea să preiei acest ticket.",
@@ -288,7 +308,7 @@ class TicketView(discord.ui.View):
                 "Un membru din staff se ocupă acum de această cerere."
             ),
             color=discord.Color.green(),
-            timestamp=datetime.now(ZoneInfo("Europe/Bucharest")),
+            timestamp=datetime.now(timezone.utc),
         )
         embed.set_thumbnail(url=interaction.user.display_avatar.url)
         embed.set_footer(text="Ratonii Tickets")
@@ -309,7 +329,7 @@ class TicketView(discord.ui.View):
         if interaction.guild is None or interaction.channel is None:
             return
 
-        allowed = await self._is_staff_allowed(interaction)
+        allowed = await is_staff_allowed(interaction)
         if not allowed:
             await interaction.response.send_message(
                 "Nu ai permisiunea să închizi acest ticket.",
@@ -321,7 +341,7 @@ class TicketView(discord.ui.View):
             title="Confirmare închidere ticket",
             description="Alege statusul cu care vrei să închizi acest ticket.",
             color=discord.Color.orange(),
-            timestamp=datetime.now(ZoneInfo("Europe/Bucharest")),
+            timestamp=datetime.now(timezone.utc),
         )
         embed.add_field(
             name="Opțiuni",
