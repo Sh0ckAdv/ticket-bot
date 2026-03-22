@@ -2,7 +2,8 @@ from __future__ import annotations
 import asyncio
 
 import discord
-from datetime import datetime, timezone
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from sqlalchemy import select
 
 from bot.db.models import GuildSettings, StaffPoint, Ticket
@@ -81,7 +82,7 @@ class CloseConfirmView(discord.ui.View):
 
             ticket.status = "closed"
             ticket.closed_by = interaction.user.id
-            ticket.closed_at = datetime.now(timezone.utc)
+            ticket.closed_at = datetime.now(ZoneInfo("Europe/Bucharest"))
 
             if resolved:
                 staff_points_result = await session.execute(
@@ -119,7 +120,7 @@ class CloseConfirmView(discord.ui.View):
                 f"**Status:** {status_text}"
             ),
             color=status_color,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(ZoneInfo("Europe/Bucharest")),
         )
         transcript_embed.add_field(
             name="Creator",
@@ -145,7 +146,7 @@ class CloseConfirmView(discord.ui.View):
             title="Ticket închis",
             description=f"Canalul **{channel.name}** va fi șters automat.",
             color=status_color,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(ZoneInfo("Europe/Bucharest")),
         )
         log_embed.add_field(
             name="Creator",
@@ -175,7 +176,7 @@ class CloseConfirmView(discord.ui.View):
                 "Canalul va fi șters în 5 secunde."
             ),
             color=status_color,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(ZoneInfo("Europe/Bucharest")),
         )
         close_embed.set_footer(text="Ratonii Tickets")
 
@@ -287,7 +288,7 @@ class TicketView(discord.ui.View):
                 "Un membru din staff se ocupă acum de această cerere."
             ),
             color=discord.Color.green(),
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(ZoneInfo("Europe/Bucharest")),
         )
         embed.set_thumbnail(url=interaction.user.display_avatar.url)
         embed.set_footer(text="Ratonii Tickets")
@@ -320,7 +321,7 @@ class TicketView(discord.ui.View):
             title="Confirmare închidere ticket",
             description="Alege statusul cu care vrei să închizi acest ticket.",
             color=discord.Color.orange(),
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(ZoneInfo("Europe/Bucharest")),
         )
         embed.add_field(
             name="Opțiuni",
