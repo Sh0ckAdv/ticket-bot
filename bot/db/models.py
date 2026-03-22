@@ -16,7 +16,9 @@ class GuildSettings(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     guild_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True)
 
-    tickets_category_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    password_category_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    general_category_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    unban_category_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     logs_channel_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     transcripts_channel_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
 

@@ -57,6 +57,10 @@ class RatoniiTicketsBot(commands.Bot):
             self.monthly_points_reset_loop.start()
 
     async def on_ready(self) -> None:
+        await self.change_presence(
+            status=discord.Status.dnd,
+            activity=discord.Game(name="mc.ratonii.ro")
+        )
         print(f"[BOT] Conectat ca {self.user} (ID: {self.user.id})")
 
     @tasks.loop(hours=1)

@@ -16,7 +16,9 @@ class Admin(commands.Cog):
         description="Configurează sistemul de tickete pentru acest server.",
     )
     @app_commands.describe(
-        category="Categoria în care vor fi create ticketele",
+        password_category="Categoria pentru ticketele de recuperare parolă",
+        general_category="Categoria pentru ticketele generale",
+        unban_category="Categoria pentru cererile unban",
         logs_channel="Canalul unde vor fi trimise log-urile",
         transcripts_channel="Canalul unde vor fi trimise transcript-urile",
         password_support_role="Rolul care poate vedea ticketele de recuperare parolă",
@@ -28,7 +30,9 @@ class Admin(commands.Cog):
     async def ticketsetup(
         self,
         interaction: discord.Interaction,
-        category: discord.CategoryChannel,
+        password_category: discord.CategoryChannel,
+        general_category: discord.CategoryChannel,
+        unban_category: discord.CategoryChannel,
         logs_channel: discord.TextChannel,
         transcripts_channel: discord.TextChannel,
         password_support_role: discord.Role,
@@ -54,7 +58,9 @@ class Admin(commands.Cog):
             if settings is None:
                 settings = GuildSettings(
                     guild_id=interaction.guild.id,
-                    tickets_category_id=category.id,
+                    password_category_id=password_category.id,
+                    general_category_id=general_category.id,
+                    unban_category_id=unban_category.id,
                     logs_channel_id=logs_channel.id,
                     transcripts_channel_id=transcripts_channel.id,
                     password_support_role_id=password_support_role.id,
@@ -65,7 +71,9 @@ class Admin(commands.Cog):
                 )
                 session.add(settings)
             else:
-                settings.tickets_category_id = category.id
+                settings.password_category_id = password_category.id
+                settings.general_category_id = general_category.id
+                settings.unban_category_id = unban_category.id
                 settings.logs_channel_id = logs_channel.id
                 settings.transcripts_channel_id = transcripts_channel.id
                 settings.password_support_role_id = password_support_role.id
@@ -81,7 +89,9 @@ class Admin(commands.Cog):
             description="Configurarea a fost salvată cu succes.",
             color=discord.Color.green(),
         )
-        embed.add_field(name="Categorie Tickete", value=category.mention, inline=False)
+        embed.add_field(name="Categorie Recuperare Parolă", value=password_category.mention, inline=False)
+        embed.add_field(name="Categorie Ticket", value=general_category.mention, inline=False)
+        embed.add_field(name="Categorie Cerere Unban", value=unban_category.mention, inline=False)
         embed.add_field(name="Canal Log-uri", value=logs_channel.mention, inline=False)
         embed.add_field(name="Canal Transcript-uri", value=transcripts_channel.mention, inline=False)
         embed.add_field(name="Rol Recuperare Parolă", value=password_support_role.mention, inline=False)

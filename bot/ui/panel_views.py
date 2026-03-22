@@ -229,7 +229,19 @@ class TicketPanelView(discord.ui.View):
                 )
                 ping_roles.append(role.mention)
 
-            category = guild.get_channel(settings.tickets_category_id)
+            if ticket_type == "password":
+                category = guild.get_channel(settings.password_category_id)
+            elif ticket_type == "unban":
+                category = guild.get_channel(settings.unban_category_id)
+            else:
+                category = guild.get_channel(settings.general_category_id)
+
+            if category is None or not isinstance(category, discord.CategoryChannel):
+                await interaction.followup.send(
+                    "Categoria pentru acest tip de ticket nu este configurată corect.",
+                    ephemeral=True,
+                )
+                return
 
             channel = await guild.create_text_channel(
                 name=channel_name,
