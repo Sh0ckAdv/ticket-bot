@@ -1,0 +1,5 @@
+discord.py
+SQLAlchemy
+aiomysql
+python-dotenv
+cryptography
