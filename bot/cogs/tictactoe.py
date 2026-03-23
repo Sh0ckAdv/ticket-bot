@@ -14,6 +14,7 @@ WIN_COMBINATIONS = [
     (2, 4, 6),
 ]
 
+ALLOWED_CHANNEL_ID = 1088801768051327056  # pune ID-ul canalului tau
 
 class TicTacToeButton(discord.ui.Button):
     def __init__(self, position: int):
@@ -235,8 +236,6 @@ class TicTacToeChallengeView(discord.ui.View):
 class TicTacToe(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-
-    ALLOWED_CHANNEL_ID = 1088801768051327056  # pune ID-ul canalului tau
 
     @app_commands.command(name="xo", description="Provoaca un jucator la X si 0.")
     async def xo(self, interaction: discord.Interaction, user: discord.Member):
