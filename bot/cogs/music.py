@@ -26,6 +26,7 @@ ADMIN_ROLE_IDS = {
     1129501329740533883,
     1093217111876325406,
 }
+
 AUTO_DISCONNECT_SECONDS = 30
 
 
@@ -291,6 +292,78 @@ class Music(commands.Cog):
 
         return vc
 
+    def normalize_data(self, data: dict) -> dict:
+        if "entries" in data:
+            entries = data.get("entries") or []
+            if not entries:
+                raise ValueError("Nu am gasit nicio piesa.")
+            data = entries[0]
+
+        title = data.get("title", "Necunoscut")
+        webpage_url = data.get("webpage_url") or data.get("original_url") or data.get("url")
+        thumbnail = data.get("thumbnail")
+        uploader = data.get("uploader", "Necunoscut")
+        duration = data.get("duration")
+
+        duration_text = "Live"
+        if isinstance(duration, int):
+            minutes = duration // 60
+            seconds = duration % 60
+            duration_text = f"{minutes}:{seconds:02d}"
+
+        return {
+            "title": title,
+            "webpage_url": webpage_url,
+            "thumbnail": thumbnail,
+            "uploader": uploader,
+            "duration_text": duration_text,
+        }
+
+    async def refresh_song_stream(self, song: dict) -> dict:
+        source_query = song.get("webpage_url") or song.get("search_query")
+        if not source_query:
+            raise ValueError("Melodia nu are sursa valida pentru refresh.")
+
+        fresh_data = await self.extract_info(source_query)
+
+        if "entries" in fresh_data:
+            entries = fresh_data.get("entries") or []
+            if not entries:
+                raise ValueError("Nu am putut reobtine melodia din queue.")
+            fresh_data = entries[0]
+
+        stream_url = fresh_data.get("url")
+        if not stream_url:
+            raise ValueError("Nu am putut obtine stream URL.")
+
+        song["stream_url"] = stream_url
+        song["webpage_url"] = (
+            fresh_data.get("webpage_url")
+            or song.get("webpage_url")
+            or source_query
+        )
+        song["thumbnail"] = fresh_data.get("thumbnail") or song.get("thumbnail")
+        song["uploader"] = fresh_data.get("uploader") or song.get("uploader", "Necunoscut")
+
+        duration = fresh_data.get("duration")
+        if isinstance(duration, int):
+            minutes = duration // 60
+            seconds = duration % 60
+            song["duration_text"] = f"{minutes}:{seconds:02d}"
+
+        return song
+
+    def make_after_callback(self, guild: discord.Guild):
+        def after_play(error):
+            if error:
+                print(f"[AFTER PLAY ERROR] {error}")
+
+            self.bot.loop.call_soon_threadsafe(
+                lambda: asyncio.create_task(self.play_next(guild))
+            )
+
+        return after_play
+
     async def play_next(self, guild: discord.Guild):
         vc = guild.voice_client
         if vc is None:
@@ -306,24 +379,18 @@ class Music(commands.Cog):
         self.cancel_disconnect(guild.id)
 
         song = queue.pop(0)
-        self.now_playing[guild.id] = song
 
-        source = discord.FFmpegPCMAudio(song["stream_url"], **FFMPEG_OPTIONS)
+        try:
+            song = await self.refresh_song_stream(song)
+            self.now_playing[guild.id] = song
 
-        def after_play(error):
-            if error:
-                print(f"[AFTER PLAY ERROR] {error}")
+            source = discord.FFmpegPCMAudio(song["stream_url"], **FFMPEG_OPTIONS)
+            vc.play(source, after=self.make_after_callback(guild))
 
-            future = asyncio.run_coroutine_threadsafe(
-                self.play_next(guild),
-                self.bot.loop
-            )
-            try:
-                future.result()
-            except Exception as e:
-                print(f"[QUEUE NEXT ERROR] {type(e).__name__}: {e}")
-
-        vc.play(source, after=after_play)
+        except Exception as e:
+            print(f"[PLAY NEXT ERROR] {type(e).__name__}: {e}")
+            await self.play_next(guild)
+            return
 
         channel = guild.get_channel(song["text_channel_id"])
         if isinstance(channel, discord.TextChannel):
@@ -363,7 +430,6 @@ class Music(commands.Cog):
         if vc is None or vc.channel is None:
             return
 
-        # dacă botul e mutat sau deconectat manual, curățăm timerul când e cazul
         if self.bot.user and member.id == self.bot.user.id:
             if after.channel is not None:
                 self.cancel_disconnect(member.guild.id)
@@ -372,7 +438,6 @@ class Music(commands.Cog):
                 self.now_playing.pop(member.guild.id, None)
             return
 
-        # dacă botul rămâne singur pe voice -> iese instant
         members_without_bots = [m for m in vc.channel.members if not m.bot]
         if len(members_without_bots) == 0:
             try:
@@ -460,39 +525,17 @@ class Music(commands.Cog):
             self.cancel_disconnect(interaction.guild.id)
 
             data = await self.extract_info(query)
-
-            if "entries" in data:
-                entries = data.get("entries") or []
-                if not entries:
-                    await interaction.edit_original_response(
-                        content="Nu am gasit nicio piesa.",
-                        embed=None
-                    )
-                    return
-                data = entries[0]
-
-            title = data.get("title", "Necunoscut")
-            stream_url = data["url"]
-            webpage_url = data.get("webpage_url", query)
-            thumbnail = data.get("thumbnail")
-            uploader = data.get("uploader", "Necunoscut")
-            duration = data.get("duration")
-
-            duration_text = "Live"
-            if isinstance(duration, int):
-                minutes = duration // 60
-                seconds = duration % 60
-                duration_text = f"{minutes}:{seconds:02d}"
+            info = self.normalize_data(data)
 
             song = {
-                "title": title,
-                "stream_url": stream_url,
-                "webpage_url": webpage_url,
-                "thumbnail": thumbnail,
-                "uploader": uploader,
-                "duration_text": duration_text,
+                "title": info["title"],
+                "webpage_url": info["webpage_url"],
+                "thumbnail": info["thumbnail"],
+                "uploader": info["uploader"],
+                "duration_text": info["duration_text"],
                 "requested_by": interaction.user.display_name,
                 "text_channel_id": interaction.channel_id,
+                "search_query": info["webpage_url"] or query,
             }
 
             queue = self.get_guild_queue(interaction.guild.id)
@@ -503,50 +546,37 @@ class Music(commands.Cog):
                 embed = spotify_embed(
                     title="➕ Added to Queue",
                     description=(
-                        f"**[{title}]({webpage_url})**\n\n"
-                        f"👤 **Artist/Uploader:** {uploader}\n"
-                        f"⏱️ **Durata:** {duration_text}\n"
+                        f"**[{song['title']}]({song['webpage_url']})**\n\n"
+                        f"👤 **Artist/Uploader:** {song['uploader']}\n"
+                        f"⏱️ **Durata:** {song['duration_text']}\n"
                         f"📜 **Pozitie in queue:** {len(queue)}"
                     ),
-                    thumbnail=thumbnail,
-                    url=webpage_url,
+                    thumbnail=song["thumbnail"],
+                    url=song["webpage_url"],
                     footer=f"Adaugat de {interaction.user.display_name}"
                 )
                 await interaction.edit_original_response(content="", embed=embed)
                 return
 
+            song = await self.refresh_song_stream(song)
             self.now_playing[interaction.guild.id] = song
 
-            source = discord.FFmpegPCMAudio(stream_url, **FFMPEG_OPTIONS)
-
-            def after_play(error):
-                if error:
-                    print(f"[AFTER PLAY ERROR] {error}")
-
-                future = asyncio.run_coroutine_threadsafe(
-                    self.play_next(interaction.guild),
-                    self.bot.loop
-                )
-                try:
-                    future.result()
-                except Exception as e:
-                    print(f"[QUEUE NEXT ERROR] {type(e).__name__}: {e}")
-
-            vc.play(source, after=after_play)
+            source = discord.FFmpegPCMAudio(song["stream_url"], **FFMPEG_OPTIONS)
+            vc.play(source, after=self.make_after_callback(interaction.guild))
             self.cancel_disconnect(interaction.guild.id)
 
             desc = (
-                f"**[{title}]({webpage_url})**\n\n"
-                f"👤 **Artist/Uploader:** {uploader}\n"
-                f"⏱️ **Durata:** {duration_text}\n"
+                f"**[{song['title']}]({song['webpage_url']})**\n\n"
+                f"👤 **Artist/Uploader:** {song['uploader']}\n"
+                f"⏱️ **Durata:** {song['duration_text']}\n"
                 f"🔊 **Canal:** {vc.channel.name}"
             )
 
             embed = spotify_embed(
                 title="🎵 Now Playing",
                 description=desc,
-                thumbnail=thumbnail,
-                url=webpage_url,
+                thumbnail=song["thumbnail"],
+                url=song["webpage_url"],
                 footer=f"Cerut de {interaction.user.display_name}"
             )
 
