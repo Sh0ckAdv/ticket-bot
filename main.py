@@ -58,17 +58,17 @@ class RatoniiTicketsBot(commands.Bot):
             self.monthly_points_reset_loop.start()
             print("[TASK] Monthly points reset loop started.")
 
-    async def on_message(message):
+    async def on_message(self, message: discord.Message):
         if message.author.bot:
             return
 
         if message.author.id == SHOCKULETZ_USER_ID:
             content = message.content.lower()
 
-            if bot.user in message.mentions and "te iubi" in content:
+            if self.user in message.mentions and "te iubi" in content:
                 await message.reply("si eu te iubesc <3")
 
-        await bot.process_commands(message)
+        await self.process_commands(message)
 
     async def on_ready(self) -> None:
         await self.change_presence(
