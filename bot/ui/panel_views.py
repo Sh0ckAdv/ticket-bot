@@ -63,7 +63,7 @@ class TicketPanelView(discord.ui.View):
         q3 = await self.ask_question(
             channel,
             user,
-            "Ai un email asociat contului? **(Da/Nu)**?",
+            "Ai un email asociat contului? **(Da/Nu)** Daca da, reseteaza parola pe https://panel.ratonii.ro/custom/reset-password",
         )
         if q3 is None:
             return
