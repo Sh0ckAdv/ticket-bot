@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+GUILD_ID = int(os.getenv("GUILD_ID", "0"))
+
 from discord.ext import commands, tasks
 
 from bot.core.config import get_discord_token
@@ -38,6 +40,14 @@ class RatoniiTicketsBot(commands.Bot):
                     print(f"[COG] Loaded: {extension}")
                 except Exception as exc:
                     print(f"[COG] Failed to load {extension}: {type(exc).__name__}: {exc}")
+        
+        try:
+            guild = discord.Object(id=GUILD_ID)
+            self.tree.copy_global_to(guild=guild)
+            synced = await self.tree.sync(guild=guild)
+            print(f"Synced {len(synced)} guild command(s) to {GUILD_ID}.")
+        except Exception as e:
+            print(f"Sync error: {type(e).__name__}: {e}")
 
         self.add_view(TicketPanelView(self))
         self.add_view(TicketView())

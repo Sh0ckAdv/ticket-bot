@@ -3,4 +3,5 @@ SQLAlchemy
 aiomysql
 python-dotenv
 cryptography
-openai
+PyNaCl
+yt-dlp
