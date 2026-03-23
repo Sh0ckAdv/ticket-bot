@@ -6,7 +6,10 @@ from discord.ext import commands
 import yt_dlp
 
 
-ALLOWED_CHANNEL_ID = 1088801768051327056
+ALLOWED_CHANNEL_IDS = {
+    1088801768051327056,
+    1272661493758034051,
+}
 
 ALLOWED_ROLE_IDS = {
     1370492194284376213,
@@ -123,15 +126,17 @@ class Music(commands.Cog):
                 )
             return False
 
-        if interaction.channel_id != ALLOWED_CHANNEL_ID:
+        if interaction.channel_id not in ALLOWED_CHANNEL_IDS:
+            channels = ", ".join(f"<#{cid}>" for cid in ALLOWED_CHANNEL_IDS)
+
             if interaction.response.is_done():
                 await interaction.edit_original_response(
-                    content=f"Aceste comenzi merg doar pe <#{ALLOWED_CHANNEL_ID}>.",
+                    content=f"Aceste comenzi merg doar pe {channels}.",
                     embed=None
                 )
             else:
                 await interaction.response.send_message(
-                    f"Aceste comenzi merg doar pe <#{ALLOWED_CHANNEL_ID}>.",
+                    f"Aceste comenzi merg doar pe {channels}.",
                     ephemeral=True
                 )
             return False
