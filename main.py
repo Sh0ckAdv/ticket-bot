@@ -14,7 +14,7 @@ from bot.services.points_reset_service import process_monthly_staff_points_reset
 from bot.ui.panel_views import TicketPanelView
 from bot.ui.ticket_views import TicketView
 
-TARGET_CHANNEL_ID = 1392129541211947032  # pune ID-ul canalului
+TARGET_CHANNEL_ID = 1463329532730933483  # pune ID-ul canalului
 HF_TOKEN = os.getenv("HF_TOKEN")
 HF_MODEL = os.getenv("HF_MODEL", "mistralai/Mistral-7B-Instruct-v0.2")
 
