@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 GUILD_ID = int(os.getenv("GUILD_ID", "0"))
+SHOCKULETZ_USER_ID = 237212746763075585  
 
 from discord.ext import commands, tasks
 
@@ -56,6 +57,18 @@ class RatoniiTicketsBot(commands.Bot):
         if not self.monthly_points_reset_loop.is_running():
             self.monthly_points_reset_loop.start()
             print("[TASK] Monthly points reset loop started.")
+
+    async def on_message(message):
+        if message.author.bot:
+            return
+
+        if message.author.id == SHOCKULETZ_USER_ID:
+            content = message.content.lower()
+
+            if bot.user in message.mentions and "te iubi" in content:
+                await message.reply("si eu te iubesc <3")
+
+        await bot.process_commands(message)
 
     async def on_ready(self) -> None:
         await self.change_presence(
