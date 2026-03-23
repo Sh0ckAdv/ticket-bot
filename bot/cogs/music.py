@@ -6,7 +6,7 @@ from discord.ext import commands
 import yt_dlp
 
 
-ALLOWED_CHANNEL_ID = 1392129541211947032
+ALLOWED_CHANNEL_ID = 1088801768051327056
 
 ALLOWED_ROLE_IDS = {
     1370492194284376213,
@@ -23,6 +23,7 @@ ADMIN_ROLE_IDS = {
     1129501329740533883,
     1093217111876325406,
 }
+AUTO_DISCONNECT_SECONDS = 30
 
 
 class YTDLLogger:
@@ -82,6 +83,7 @@ class Music(commands.Cog):
         self.ytdl = yt_dlp.YoutubeDL(YTDL_OPTIONS)
         self.queues: dict[int, list[dict]] = {}
         self.now_playing: dict[int, dict] = {}
+        self.disconnect_tasks: dict[int, asyncio.Task] = {}
 
     def user_has_allowed_role(self, member: discord.Member) -> bool:
         return any(role.id in ALLOWED_ROLE_IDS for role in member.roles)
@@ -224,6 +226,39 @@ class Music(commands.Cog):
             self.queues[guild_id] = []
         return self.queues[guild_id]
 
+    def cancel_disconnect(self, guild_id: int):
+        task = self.disconnect_tasks.get(guild_id)
+        if task:
+            task.cancel()
+            self.disconnect_tasks.pop(guild_id, None)
+
+    async def schedule_disconnect(self, guild: discord.Guild):
+        guild_id = guild.id
+
+        if guild_id in self.disconnect_tasks:
+            return
+
+        async def task():
+            try:
+                await asyncio.sleep(AUTO_DISCONNECT_SECONDS)
+
+                vc = guild.voice_client
+                queue = self.get_guild_queue(guild_id)
+
+                if vc and not vc.is_playing() and not vc.is_paused() and not queue:
+                    print(f"[AUTO DISCONNECT] {guild.name}")
+                    await vc.disconnect(force=True)
+                    self.now_playing.pop(guild_id, None)
+
+            except asyncio.CancelledError:
+                pass
+            except Exception as e:
+                print(f"[AUTO DISCONNECT ERROR] {type(e).__name__}: {e}")
+            finally:
+                self.disconnect_tasks.pop(guild_id, None)
+
+        self.disconnect_tasks[guild_id] = asyncio.create_task(task())
+
     async def extract_info(self, query: str) -> dict:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(
@@ -260,7 +295,10 @@ class Music(commands.Cog):
 
         if not queue:
             self.now_playing.pop(guild.id, None)
+            await self.schedule_disconnect(guild)
             return
+
+        self.cancel_disconnect(guild.id)
 
         song = queue.pop(0)
         self.now_playing[guild.id] = song
@@ -306,6 +344,41 @@ class Music(commands.Cog):
             except Exception as e:
                 print(f"[NOW PLAYING SEND ERROR] {type(e).__name__}: {e}")
 
+    @commands.Cog.listener()
+    async def on_voice_state_update(
+        self,
+        member: discord.Member,
+        before: discord.VoiceState,
+        after: discord.VoiceState,
+    ):
+        if not member.guild:
+            return
+
+        vc = member.guild.voice_client
+        if vc is None or vc.channel is None:
+            return
+
+        # dacă botul e mutat sau deconectat manual, curățăm timerul când e cazul
+        if self.bot.user and member.id == self.bot.user.id:
+            if after.channel is not None:
+                self.cancel_disconnect(member.guild.id)
+            else:
+                self.cancel_disconnect(member.guild.id)
+                self.now_playing.pop(member.guild.id, None)
+            return
+
+        # dacă botul rămâne singur pe voice -> iese instant
+        members_without_bots = [m for m in vc.channel.members if not m.bot]
+        if len(members_without_bots) == 0:
+            try:
+                self.get_guild_queue(member.guild.id).clear()
+                self.now_playing.pop(member.guild.id, None)
+                self.cancel_disconnect(member.guild.id)
+                await vc.disconnect(force=True)
+                print(f"[AUTO LEAVE ALONE] {member.guild.name}")
+            except Exception as e:
+                print(f"[AUTO LEAVE ALONE ERROR] {type(e).__name__}: {e}")
+
     @app_commands.command(name="join", description="Intra pe voice channel-ul tau.")
     async def join(self, interaction: discord.Interaction):
         try:
@@ -328,6 +401,8 @@ class Music(commands.Cog):
                     embed=None
                 )
                 return
+
+            self.cancel_disconnect(interaction.guild.id)
 
             embed = spotify_embed(
                 title="🎧 Connected",
@@ -376,6 +451,8 @@ class Music(commands.Cog):
                         embed=None
                     )
                 return
+
+            self.cancel_disconnect(interaction.guild.id)
 
             data = await self.extract_info(query)
 
@@ -451,6 +528,7 @@ class Music(commands.Cog):
                     print(f"[QUEUE NEXT ERROR] {type(e).__name__}: {e}")
 
             vc.play(source, after=after_play)
+            self.cancel_disconnect(interaction.guild.id)
 
             desc = (
                 f"**[{title}]({webpage_url})**\n\n"
@@ -579,6 +657,7 @@ class Music(commands.Cog):
 
             if vc.is_paused():
                 vc.resume()
+                self.cancel_disconnect(interaction.guild.id)
 
                 embed = spotify_embed(
                     title="▶️ Resumed",
@@ -617,9 +696,11 @@ class Music(commands.Cog):
             if vc.is_playing() or vc.is_paused():
                 vc.stop()
 
+            await self.schedule_disconnect(interaction.guild)
+
             embed = spotify_embed(
                 title="⏹️ Stopped",
-                description="Am oprit muzica si am golit queue-ul.",
+                description=f"Am oprit muzica si am golit queue-ul. Daca nu pornește nimic in {AUTO_DISCONNECT_SECONDS} secunde, botul va iesi singur.",
                 footer=f"Cerut de {interaction.user.display_name}"
             )
             await interaction.edit_original_response(content="", embed=embed)
@@ -648,6 +729,7 @@ class Music(commands.Cog):
             channel_name = interaction.guild.voice_client.channel.name
             self.get_guild_queue(interaction.guild.id).clear()
             self.now_playing.pop(interaction.guild.id, None)
+            self.cancel_disconnect(interaction.guild.id)
 
             await interaction.guild.voice_client.disconnect(force=True)
 
