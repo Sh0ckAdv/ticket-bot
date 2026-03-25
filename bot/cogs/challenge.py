@@ -9,7 +9,7 @@ from discord import app_commands
 from discord.ext import commands
 
 
-ALLOWED_CHANNEL_ID = 1463329532730933483
+ALLOWED_CHANNEL_ID = 1088801768051327056
 
 ACCEPT_TIMEOUT = 30
 TYPE_TIMEOUT = 45
@@ -119,6 +119,7 @@ CHALLENGE_WORDS = [
 
 @dataclass
 class ActiveChallenge:
+    challenge_id: float
     guild_id: int
     channel_id: int
     challenger_id: int
@@ -143,6 +144,11 @@ class ChallengeInviteView(discord.ui.View):
             item.disabled = True
 
     async def on_timeout(self):
+        current = self.cog.get_challenge(self.challenge.channel_id)
+        if not current:
+            return
+        if current.challenge_id != self.challenge.challenge_id:
+            return
         if self.challenge.finished or self.challenge.started:
             return
 
@@ -165,7 +171,7 @@ class ChallengeInviteView(discord.ui.View):
             except Exception:
                 pass
 
-        self.cog.remove_challenge(self.challenge.channel_id)
+        self.cog.remove_challenge(self.challenge.channel_id, self.challenge.challenge_id)
 
     @discord.ui.button(label="Acceptă", style=discord.ButtonStyle.success)
     async def accept_button(
@@ -176,6 +182,14 @@ class ChallengeInviteView(discord.ui.View):
         if interaction.user.id != self.challenge.opponent_id:
             await interaction.response.send_message(
                 "Doar jucătorul provocat poate accepta acest challenge.",
+                ephemeral=True,
+            )
+            return
+
+        current = self.cog.get_challenge(self.challenge.channel_id)
+        if not current or current.challenge_id != self.challenge.challenge_id:
+            await interaction.response.send_message(
+                "Acest challenge nu mai este disponibil.",
                 ephemeral=True,
             )
             return
@@ -216,7 +230,10 @@ class ChallengeInviteView(discord.ui.View):
         await interaction.response.edit_message(embed=embed, view=self)
 
         self.cog.bot.loop.create_task(
-            self.cog.challenge_type_timeout(self.challenge.channel_id)
+            self.cog.challenge_type_timeout(
+                self.challenge.channel_id,
+                self.challenge.challenge_id
+            )
         )
 
     @discord.ui.button(label="Refuză", style=discord.ButtonStyle.danger)
@@ -228,6 +245,14 @@ class ChallengeInviteView(discord.ui.View):
         if interaction.user.id != self.challenge.opponent_id:
             await interaction.response.send_message(
                 "Doar jucătorul provocat poate refuza acest challenge.",
+                ephemeral=True,
+            )
+            return
+
+        current = self.cog.get_challenge(self.challenge.channel_id)
+        if not current or current.challenge_id != self.challenge.challenge_id:
+            await interaction.response.send_message(
+                "Acest challenge nu mai este disponibil.",
                 ephemeral=True,
             )
             return
@@ -252,7 +277,7 @@ class ChallengeInviteView(discord.ui.View):
         )
 
         await interaction.response.edit_message(embed=embed, view=self)
-        self.cog.remove_challenge(self.challenge.channel_id)
+        self.cog.remove_challenge(self.challenge.channel_id, self.challenge.challenge_id)
 
 
 class ChallengeCog(commands.Cog):
@@ -260,17 +285,26 @@ class ChallengeCog(commands.Cog):
         self.bot = bot
         self.active_challenges: dict[int, ActiveChallenge] = {}
 
-    def remove_challenge(self, channel_id: int):
+    def remove_challenge(self, channel_id: int, challenge_id: Optional[float] = None):
+        current = self.active_challenges.get(channel_id)
+        if not current:
+            return
+
+        if challenge_id is not None and current.challenge_id != challenge_id:
+            return
+
         self.active_challenges.pop(channel_id, None)
 
     def get_challenge(self, channel_id: int) -> Optional[ActiveChallenge]:
         return self.active_challenges.get(channel_id)
 
-    async def challenge_type_timeout(self, channel_id: int):
+    async def challenge_type_timeout(self, channel_id: int, challenge_id: float):
         await asyncio.sleep(TYPE_TIMEOUT)
 
         challenge = self.get_challenge(channel_id)
         if not challenge:
+            return
+        if challenge.challenge_id != challenge_id:
             return
         if challenge.finished or not challenge.started:
             return
@@ -289,7 +323,7 @@ class ChallengeCog(commands.Cog):
             )
             await channel.send(embed=embed)
 
-        self.remove_challenge(channel_id)
+        self.remove_challenge(channel_id, challenge_id)
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -346,7 +380,7 @@ class ChallengeCog(commands.Cog):
             embed.set_footer(text=f"Timp de reacție: {elapsed} secunde")
 
         await message.channel.send(embed=embed)
-        self.remove_challenge(message.channel.id)
+        self.remove_challenge(message.channel.id, challenge.challenge_id)
 
     @app_commands.command(
         name="challenge",
@@ -393,15 +427,17 @@ class ChallengeCog(commands.Cog):
             )
             return
 
+        now = time.time()
         word = random.choice(CHALLENGE_WORDS)
 
         challenge = ActiveChallenge(
+            challenge_id=now,
             guild_id=interaction.guild.id,
             channel_id=interaction.channel.id,
             challenger_id=interaction.user.id,
             opponent_id=user.id,
             word=word,
-            created_at=time.time(),
+            created_at=now,
         )
         self.active_challenges[interaction.channel.id] = challenge
 
