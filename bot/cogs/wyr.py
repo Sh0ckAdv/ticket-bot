@@ -8,7 +8,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 
-TARGET_CHANNEL_ID = 1463329532730933483
+TARGET_CHANNEL_ID = 1133364222164729978
 POLL_DURATION_SECONDS = 30
 TIMEZONE = "Europe/Bucharest"
 
