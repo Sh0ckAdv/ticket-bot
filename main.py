@@ -67,6 +67,8 @@ class RatoniiTicketsBot(commands.Bot):
 
             if self.user in message.mentions and "te iubi" in content:
                 await message.reply("si eu te iubesc <3")
+            elif self.user in message.mentions and "asa e?" in content:
+                await message.reply("da, asa e")
 
         await self.process_commands(message)
 
