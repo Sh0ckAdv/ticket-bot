@@ -3,7 +3,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 
-ALLOWED_CHANNEL_ID = 1463329532730933483
+ALLOWED_CHANNEL_ID = 1088801768051327056
 
 
 class Fun(commands.Cog):
