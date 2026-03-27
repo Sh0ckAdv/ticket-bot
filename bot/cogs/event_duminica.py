@@ -3,7 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 
 PANEL_CHANNEL_ID = 1487184469348712552
-ROLE_ID = 1487185104853008485
+ROLE_ID = 1487184621975371847
 
 
 class EventDuminicaView(discord.ui.View):
