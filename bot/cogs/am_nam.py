@@ -10,7 +10,7 @@ from discord import app_commands
 # CONFIG
 # =========================
 
-TARGET_CHANNEL_ID = 1487574355620925460  # <- pune aici ID-ul canalului
+TARGET_CHANNEL_ID = 1133364222164729978  # <- pune aici ID-ul canalului
 
 try:
     TIMEZONE = ZoneInfo("Europe/Bucharest")
