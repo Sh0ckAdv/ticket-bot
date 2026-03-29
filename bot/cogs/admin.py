@@ -3,6 +3,13 @@ from discord import app_commands
 from discord.ext import commands
 from sqlalchemy import select
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
+GUILD_ID = int(os.getenv("GUILD_ID", "0"))
+MY_GUILD = discord.Object(id=GUILD_ID) 
+
 from bot.db.models import GuildSettings
 from bot.db.session import AsyncSessionLocal
 
@@ -12,7 +19,7 @@ class Admin(commands.Cog):
         self.bot = bot
 
     @app_commands.command(
-        name="ticketsetup2",
+        name="ticketsetup",
         description="Configurează sistemul de tickete pentru acest server.",
     )
     @app_commands.describe(
@@ -26,6 +33,7 @@ class Admin(commands.Cog):
         manager_discord_role="Rolul manager pentru ticketele generale și cererile unban",
         max_open_tickets="Numărul maxim de tickete deschise per utilizator",
     )
+    @app_commands.guilds(MY_GUILD)
     @app_commands.checks.has_permissions(administrator=True)
     async def ticketsetup(
         self,
