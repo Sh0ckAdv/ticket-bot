@@ -94,15 +94,38 @@ class RatoniiTicketsBot(commands.Bot):
 bot = RatoniiTicketsBot()
 
 
-@bot.command(name="sync")
+@bot.command(name="syncguild")
 @commands.is_owner()
-async def sync_command(ctx: commands.Context) -> None:
+async def syncguild_command(ctx: commands.Context) -> None:
     try:
-        synced = await bot.tree.sync()
-        await ctx.send(f"✅ Synced {len(synced)} global command(s).")
+        guild = discord.Object(id=GUILD_ID)
+        synced = await bot.tree.sync(guild=guild)
+        await ctx.send(f"✅ Synced {len(synced)} guild command(s) to {GUILD_ID}.")
     except Exception as exc:
         await ctx.send(f"❌ Sync error: {type(exc).__name__}: {exc}")
 
+@bot.command(name="load")
+@commands.is_owner()
+async def load_command(ctx: commands.Context, extension: str) -> None:
+    try:
+        await bot.load_extension(extension)
+        guild = discord.Object(id=GUILD_ID)
+        synced = await bot.tree.sync(guild=guild)
+        await ctx.send(f"✅ Loaded {extension} și am sincronizat {len(synced)} command(s).")
+    except Exception as exc:
+        await ctx.send(f"❌ Load error: {type(exc).__name__}: {exc}")
+
+
+@bot.command(name="reload")
+@commands.is_owner()
+async def reload_command(ctx: commands.Context, extension: str) -> None:
+    try:
+        await bot.reload_extension(extension)
+        guild = discord.Object(id=GUILD_ID)
+        synced = await bot.tree.sync(guild=guild)
+        await ctx.send(f"✅ Reloaded {extension} și am sincronizat {len(synced)} command(s).")
+    except Exception as exc:
+        await ctx.send(f"❌ Reload error: {type(exc).__name__}: {exc}")
 
 async def main() -> None:
     token = get_discord_token()

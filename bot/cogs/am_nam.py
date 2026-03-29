@@ -1,5 +1,5 @@
 import random
-from datetime import timezone, timedelta
+from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import discord
@@ -256,15 +256,8 @@ class AmNamCog(commands.Cog):
 
     @app_commands.command(name="amnamtest", description="Trimite un mesaj de test pentru sistemul Am / N-am.")
     @app_commands.describe(text="Scrie o intrebare custom sau lasa gol pentru una random.")
-    @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
     async def amnamtest(self, interaction: discord.Interaction, text: str | None = None):
-        if not interaction.user.guild_permissions.administrator:
-            await interaction.response.send_message(
-                "Nu ai permisiunea să folosești această comandă.",
-                ephemeral=True
-            )
-            return
-
         question = text if text else random.choice(AM_NAM_QUESTIONS)
 
         if not isinstance(interaction.channel, discord.TextChannel):
