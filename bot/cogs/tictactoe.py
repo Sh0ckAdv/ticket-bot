@@ -2,6 +2,13 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+GUILD_ID = int(os.getenv("GUILD_ID", "0"))
+MY_GUILD = discord.Object(id=GUILD_ID) 
 
 WIN_COMBINATIONS = [
     (0, 1, 2),
@@ -238,6 +245,7 @@ class TicTacToe(commands.Cog):
         self.bot = bot
 
     @app_commands.command(name="xo", description="Provoaca un jucator la X si 0.")
+    @app_commands.guilds(MY_GUILD)
     async def xo(self, interaction: discord.Interaction, user: discord.Member):
         if interaction.channel_id != ALLOWED_CHANNEL_ID:
             await interaction.response.send_message(

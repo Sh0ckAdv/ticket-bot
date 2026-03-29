@@ -7,6 +7,13 @@ from bot.db.models import GuildSettings, TicketPanel
 from bot.db.session import AsyncSessionLocal
 from bot.ui.panel_views import TicketPanelView
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+GUILD_ID = int(os.getenv("GUILD_ID", "0"))
+MY_GUILD = discord.Object(id=GUILD_ID) 
 
 class Panels(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -19,6 +26,7 @@ class Panels(commands.Cog):
     @app_commands.describe(
         channel="Canalul în care va fi trimis panoul de tickete",
     )
+    @app_commands.guilds(MY_GUILD)
     @app_commands.checks.has_permissions(administrator=True)
     async def sendpanel(
         self,

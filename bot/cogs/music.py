@@ -5,6 +5,14 @@ from discord import app_commands
 from discord.ext import commands
 import yt_dlp
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+GUILD_ID = int(os.getenv("GUILD_ID", "0"))
+MY_GUILD = discord.Object(id=GUILD_ID) 
+
 
 ALLOWED_CHANNEL_IDS = {
     1088801768051327056,
@@ -450,6 +458,7 @@ class Music(commands.Cog):
                 print(f"[AUTO LEAVE ALONE ERROR] {type(e).__name__}: {e}")
 
     @app_commands.command(name="join", description="Intra pe voice channel-ul tau.")
+    @app_commands.guilds(MY_GUILD)
     async def join(self, interaction: discord.Interaction):
         try:
             await interaction.response.send_message("Ma conectez...", ephemeral=True)

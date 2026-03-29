@@ -6,7 +6,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 GUILD_ID = int(os.getenv("GUILD_ID", "0"))
-MY_GUILD = discord.Object(id=GUILD_ID)
+MY_GUILD = discord.Object(id=GUILD_ID) 
+
 SHOCKULETZ_USER_ID = 237212746763075585  
 
 from discord.ext import commands, tasks

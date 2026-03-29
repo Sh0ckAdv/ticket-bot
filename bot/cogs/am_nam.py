@@ -3,8 +3,16 @@ from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import discord
+import os
 from discord.ext import commands, tasks
 from discord import app_commands
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+GUILD_ID = int(os.getenv("GUILD_ID", "0"))
+MY_GUILD = discord.Object(id=GUILD_ID) 
 
 # =========================
 # CONFIG
@@ -351,6 +359,7 @@ class AmNamCog(commands.Cog):
 
     @app_commands.command(name="amnamtest", description="Trimite un mesaj de test pentru sistemul Am / N-am.")
     @app_commands.describe(text="Scrie o intrebare custom sau lasa gol pentru una random.")
+    @app_commands.guilds(MY_GUILD)
     @app_commands.checks.has_permissions(administrator=True)
     async def amnamtest(self, interaction: discord.Interaction, text: str | None = None):
         question = text if text else random.choice(AM_NAM_QUESTIONS)

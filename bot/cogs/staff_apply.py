@@ -7,6 +7,14 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+GUILD_ID = int(os.getenv("GUILD_ID", "0"))
+MY_GUILD = discord.Object(id=GUILD_ID) 
+
 CATEGORY_ID = 1376853209066246235
 TESTER_ROLE_ID = 1093217111876325406
 
@@ -423,6 +431,7 @@ class StaffApply(commands.Cog):
 
     @app_commands.command(name="test-apply", description="Creează un canal de apply și pornește testul.")
     @app_commands.describe(user="Utilizatorul care va susține testul")
+    @app_commands.guilds(MY_GUILD)
     async def test_apply(self, interaction: discord.Interaction, user: discord.Member) -> None:
         if not interaction.guild:
             await interaction.response.send_message(

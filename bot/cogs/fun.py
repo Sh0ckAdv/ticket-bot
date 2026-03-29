@@ -2,6 +2,13 @@ import random
 import discord
 from discord.ext import commands
 from discord import app_commands
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+GUILD_ID = int(os.getenv("GUILD_ID", "0"))
+MY_GUILD = discord.Object(id=GUILD_ID) 
 
 ALLOWED_CHANNEL_ID = 1088801768051327056
 
@@ -18,6 +25,7 @@ class Fun(commands.Cog):
         user1="Prima persoană",
         user2="A doua persoană"
     )
+    @app_commands.guilds(MY_GUILD)
     async def compatibility(
         self,
         interaction: discord.Interaction,

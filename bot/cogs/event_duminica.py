@@ -2,9 +2,16 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+GUILD_ID = int(os.getenv("GUILD_ID", "0"))
+MY_GUILD = discord.Object(id=GUILD_ID) 
+
 PANEL_CHANNEL_ID = 1487184469348712552
 ROLE_ID = 1487184621975371847
-
 
 class EventDuminicaView(discord.ui.View):
     def __init__(self):
@@ -71,6 +78,8 @@ class EventDuminica(commands.Cog):
         name="eventpiratpanel",
         description="Trimite panoul pentru event."
     )
+    @app_commands.guilds(MY_GUILD)
+    @app_commands.checks.has_permissions(administrator=True)
     async def eventpiratpanel(self, interaction: discord.Interaction):
         channel = self.bot.get_channel(PANEL_CHANNEL_ID)
 

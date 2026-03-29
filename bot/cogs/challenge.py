@@ -8,6 +8,14 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+GUILD_ID = int(os.getenv("GUILD_ID", "0"))
+MY_GUILD = discord.Object(id=GUILD_ID) 
+
 
 ALLOWED_CHANNEL_ID = 1088801768051327056
 
@@ -386,6 +394,7 @@ class ChallengeCog(commands.Cog):
         name="challenge",
         description="Provoacă un jucător la un challenge de scris rapid."
     )
+    @app_commands.guilds(MY_GUILD)
     async def challenge(
         self,
         interaction: discord.Interaction,

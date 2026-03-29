@@ -6,6 +6,14 @@ from sqlalchemy import desc, select
 from bot.db.models import StaffPoint, TicketBlacklist
 from bot.db.session import AsyncSessionLocal
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+GUILD_ID = int(os.getenv("GUILD_ID", "0"))
+MY_GUILD = discord.Object(id=GUILD_ID) 
+
 
 class Tickets(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -15,6 +23,7 @@ class Tickets(commands.Cog):
         name="ticketleaderboard",
         description="Arată leaderboard-ul staff-ului pentru tickete rezolvate.",
     )
+    @app_commands.guilds(MY_GUILD)
     async def ticketleaderboard(self, interaction: discord.Interaction) -> None:
         if interaction.guild is None:
             await interaction.response.send_message(
@@ -61,6 +70,7 @@ class Tickets(commands.Cog):
         name="ticketpoints",
         description="Arată câte puncte are un membru staff.",
     )
+    @app_commands.guilds(MY_GUILD)
     @app_commands.describe(user="Membrul căruia vrei să îi vezi punctele")
     async def ticketpoints(
         self,
@@ -103,6 +113,7 @@ class Tickets(commands.Cog):
         user="Utilizatorul pe care vrei să îl blochezi",
         reason="Motivul blacklist-ului",
     )
+    @app_commands.guilds(MY_GUILD)
     @app_commands.checks.has_permissions(administrator=True)
     async def ticketblacklistadd(
         self,
@@ -161,6 +172,7 @@ class Tickets(commands.Cog):
     @app_commands.describe(
         user="Utilizatorul pe care vrei să îl scoți din blacklist",
     )
+    @app_commands.guilds(MY_GUILD)
     @app_commands.checks.has_permissions(administrator=True)
     async def ticketblacklistremove(
         self,
