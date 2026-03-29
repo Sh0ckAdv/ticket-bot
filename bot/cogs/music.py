@@ -502,6 +502,7 @@ class Music(commands.Cog):
 
     @app_commands.command(name="play", description="Reda muzica sau o adauga in queue.")
     @app_commands.describe(query="Link YouTube sau numele piesei")
+    @app_commands.guilds(MY_GUILD)
     async def play(self, interaction: discord.Interaction, query: str):
         try:
             loading = spotify_embed(
@@ -602,6 +603,7 @@ class Music(commands.Cog):
                 pass
 
     @app_commands.command(name="queue", description="Arata queue-ul curent.")
+    @app_commands.guilds(MY_GUILD)
     async def queue_cmd(self, interaction: discord.Interaction):
         try:
             await interaction.response.send_message("Procesez...", ephemeral=True)
@@ -651,6 +653,7 @@ class Music(commands.Cog):
             print(f"[QUEUE ERROR] {type(e).__name__}: {e}")
 
     @app_commands.command(name="pause", description="Pune muzica pe pauza.")
+    @app_commands.guilds(MY_GUILD)
     async def pause(self, interaction: discord.Interaction):
         try:
             await interaction.response.send_message("Procesez...", ephemeral=True)
@@ -683,6 +686,7 @@ class Music(commands.Cog):
             print(f"[PAUSE ERROR] {type(e).__name__}: {e}")
 
     @app_commands.command(name="resume", description="Reia muzica.")
+    @app_commands.guilds(MY_GUILD)
     async def resume(self, interaction: discord.Interaction):
         try:
             await interaction.response.send_message("Procesez...", ephemeral=True)
@@ -716,6 +720,7 @@ class Music(commands.Cog):
             print(f"[RESUME ERROR] {type(e).__name__}: {e}")
 
     @app_commands.command(name="stop", description="Opreste muzica si goleste queue-ul.")
+    @app_commands.guilds(MY_GUILD)
     async def stop(self, interaction: discord.Interaction):
         try:
             await interaction.response.send_message("Procesez...", ephemeral=True)
@@ -753,6 +758,7 @@ class Music(commands.Cog):
             print(f"[STOP ERROR] {type(e).__name__}: {e}")
 
     @app_commands.command(name="leave", description="Iese de pe voice si goleste queue-ul.")
+    @app_commands.guilds(MY_GUILD)
     async def leave(self, interaction: discord.Interaction):
         try:
             await interaction.response.send_message("Ies de pe voice...", ephemeral=True)
@@ -788,6 +794,7 @@ class Music(commands.Cog):
             print(f"[LEAVE ERROR] {type(e).__name__}: {e}")
 
     @app_commands.command(name="skip", description="Da skip la piesa curenta.")
+    @app_commands.guilds(MY_GUILD)
     async def skip(self, interaction: discord.Interaction):
         try:
             await interaction.response.send_message("Dau skip...", ephemeral=True)
@@ -827,6 +834,7 @@ class Music(commands.Cog):
 
     @app_commands.command(name="remove", description="Scoate o piesa din queue dupa pozitie.")
     @app_commands.describe(position="Pozitia piesei din /queue")
+    @app_commands.guilds(MY_GUILD)
     async def remove(self, interaction: discord.Interaction, position: int):
         try:
             await interaction.response.send_message("Procesez...", ephemeral=True)
@@ -869,6 +877,7 @@ class Music(commands.Cog):
             print(f"[REMOVE ERROR] {type(e).__name__}: {e}")
 
     @app_commands.command(name="clearqueue", description="Goleste queue-ul.")
+    @app_commands.guilds(MY_GUILD)
     async def clearqueue(self, interaction: discord.Interaction):
         try:
             await interaction.response.send_message("Procesez...", ephemeral=True)

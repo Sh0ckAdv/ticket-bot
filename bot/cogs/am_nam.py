@@ -3,10 +3,10 @@ from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import discord
-import os
 from discord.ext import commands, tasks
 from discord import app_commands
 
+import os
 from dotenv import load_dotenv
 
 load_dotenv()
