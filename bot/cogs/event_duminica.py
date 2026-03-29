@@ -10,7 +10,7 @@ load_dotenv()
 GUILD_ID = int(os.getenv("GUILD_ID", "0"))
 MY_GUILD = discord.Object(id=GUILD_ID) 
 
-PANEL_CHANNEL_ID = 1487184469348712552
+PANEL_CHANNEL_ID = 1299780803860893786
 ROLE_ID = 1487184621975371847
 
 class EventDuminicaView(discord.ui.View):
