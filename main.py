@@ -44,7 +44,6 @@ class RatoniiTicketsBot(commands.Bot):
         
         try:
             guild = discord.Object(id=GUILD_ID)
-            self.tree.copy_global_to(guild=guild)
             synced = await self.tree.sync(guild=guild)
             print(f"Synced {len(synced)} guild command(s) to {GUILD_ID}.")
         except Exception as e:
@@ -126,6 +125,24 @@ async def reload_command(ctx: commands.Context, extension: str) -> None:
         await ctx.send(f"✅ Reloaded {extension} și am sincronizat {len(synced)} command(s).")
     except Exception as exc:
         await ctx.send(f"❌ Reload error: {type(exc).__name__}: {exc}")
+
+@bot.command(name="resetappcmds")
+@commands.is_owner()
+async def resetappcmds_command(ctx: commands.Context) -> None:
+    try:
+        guild = discord.Object(id=GUILD_ID)
+
+        # sterge toate comenzile globale vechi
+        bot.tree.clear_commands(guild=None)
+        await bot.tree.sync()
+
+        # sterge toate comenzile vechi de pe guild
+        bot.tree.clear_commands(guild=guild)
+        await bot.tree.sync(guild=guild)
+
+        await ctx.send("✅ Am șters toate application commands globale și de pe guild. Dă restart la bot acum.")
+    except Exception as exc:
+        await ctx.send(f"❌ Error: {type(exc).__name__}: {exc}")
 
 async def main() -> None:
     token = get_discord_token()
