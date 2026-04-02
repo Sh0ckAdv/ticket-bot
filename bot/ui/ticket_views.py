@@ -69,7 +69,7 @@ class CloseConfirmView(discord.ui.View):
             )
             return
 
-        await self._close_ticket(interaction, resolved=True)
+        await self._close_ticket(interaction, close_type="resolved")
 
     @discord.ui.button(
         label="Nu a fost rezolvat",
@@ -90,12 +90,33 @@ class CloseConfirmView(discord.ui.View):
             )
             return
 
-        await self._close_ticket(interaction, resolved=False)
+        await self._close_ticket(interaction, close_type="unresolved")
+
+    @discord.ui.button(
+        label="Ticket inactiv",
+        style=discord.ButtonStyle.primary,
+        emoji="💤",
+        custom_id="ticket_close_inactive",
+    )
+    async def inactive(
+        self,
+        interaction: discord.Interaction,
+        button: discord.ui.Button,
+    ) -> None:
+        allowed = await is_staff_allowed(interaction)
+        if not allowed:
+            await interaction.response.send_message(
+                "Nu ai permisiunea să închizi acest ticket.",
+                ephemeral=True,
+            )
+            return
+
+        await self._close_ticket(interaction, close_type="inactive")
 
     async def _close_ticket(
         self,
         interaction: discord.Interaction,
-        resolved: bool,
+        close_type: str,
     ) -> None:
         if interaction.guild is None or interaction.channel is None:
             return
@@ -103,6 +124,32 @@ class CloseConfirmView(discord.ui.View):
         await interaction.response.defer()
 
         channel = interaction.channel
+
+        status_map = {
+            "resolved": {
+                "text": "Rezolvat",
+                "color": discord.Color.green(),
+                "give_point": True,
+            },
+            "unresolved": {
+                "text": "Nu a fost rezolvat",
+                "color": discord.Color.red(),
+                "give_point": False,
+            },
+            "inactive": {
+                "text": "Ticket inactiv",
+                "color": discord.Color.orange(),
+                "give_point": False,
+            },
+        }
+
+        close_data = status_map.get(close_type)
+        if close_data is None:
+            await interaction.followup.send(
+                "Tipul de închidere nu este valid.",
+                ephemeral=True,
+            )
+            return
 
         async with AsyncSessionLocal() as session:
             settings_result = await session.execute(
@@ -135,7 +182,7 @@ class CloseConfirmView(discord.ui.View):
             ticket.closed_by = interaction.user.id
             ticket.closed_at = datetime.now(timezone.utc)
 
-            if resolved:
+            if close_data["give_point"]:
                 staff_points_result = await session.execute(
                     select(StaffPoint).where(
                         StaffPoint.guild_id == interaction.guild.id,
@@ -159,8 +206,8 @@ class CloseConfirmView(discord.ui.View):
         creator = interaction.guild.get_member(ticket.creator_id)
         closer = interaction.user
 
-        status_text = "Rezolvat" if resolved else "Nu a fost rezolvat"
-        status_color = discord.Color.green() if resolved else discord.Color.red()
+        status_text = close_data["text"]
+        status_color = close_data["color"]
 
         transcripts_channel = interaction.guild.get_channel(settings.transcripts_channel_id)
         logs_channel = interaction.guild.get_channel(settings.logs_channel_id)
@@ -345,7 +392,7 @@ class TicketView(discord.ui.View):
         )
         embed.add_field(
             name="Opțiuni",
-            value="✅ **Rezolvat**\n❌ **Nu a fost rezolvat**",
+            value="✅ **Rezolvat**\n❌ **Nu a fost rezolvat**\n💤 **Ticket inactiv**",
             inline=False,
         )
         embed.set_footer(text="Ratonii Tickets")
