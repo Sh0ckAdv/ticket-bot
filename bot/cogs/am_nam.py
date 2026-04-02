@@ -26,7 +26,7 @@ except ZoneInfoNotFoundError:
     TIMEZONE = timezone(timedelta(hours=2))
 
 VOTE_DURATION = 60  # 1 minut
-AUTO_POST_EVERY_MINUTES = 15
+AUTO_POST_EVERY_MINUTES = 60
 
 AM_NAM_QUESTIONS = [
     "Am / N-am luat o notă mică la școală",
